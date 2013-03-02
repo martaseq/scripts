@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $path = "/var/cache/pacman/pkg/";
+
+opendir(CACHEDIR, $path) || die "Could not open directory: $!";
+
+readdir CACHEDIR; # remove '.' form the list of files on the directory
+readdir CACHEDIR; # remove '..' form the list of files on the directory
+
+my @filesUnsorted = readdir CACHEDIR;
+my @files = sort(@filesUnsorted);
+
+my $lastPkg = "";
+my @versions = ();
+
+my $verbose = 0;
+if($#ARGV > -1 && $ARGV[0] eq "-v") {
+	$verbose = 1;
+}
+
+#displayInfo($#ARGV . "\n");
+#displayInfo($ARGV[0] . "\n");
+#displayInfo($verbose . "\n");
+
+sub displayInfo {
+	my $str = $_[0];
+
+	if($verbose) {
+		print $str;
+	}
+}
+
+sub processVersions {
+	my @vers = @_;
+
+	displayInfo("---\n\n");
+	displayInfo("All versions:\n" . join("\n", @vers) . "\n\n");
+	#displayInfo($lastPkg, "\n");
+
+	my $numVersions = @vers;
+
+	if($numVersions > 5) {
+		my $i = $numVersions - 5 - 1;
+		displayInfo("num de versoes: $numVersions\tindex: $i\n");
+		displayInfo("Deleting ", $numVersions - 5, " versions...\n");
+
+		foreach my $v (@vers[0..$i]) {
+			if(unlink($path.$v)) {
+				displayInfo("  Deleted ".$path.$v."\n");
+			}
+		}
+		displayInfo("\n");
+	}
+}
+
+sub deleteByCreationDate {
+	my $file = $_[0];
+
+
+}
+
+if(defined $ARGV[1] and $ARGV[1] eq 'old'){
+	foreach my $f (@files) {
+		#displayInfo("$f\n");
+
+		#deleteByCreationDate($f);
+
+		if($f =~ /([a-z]+[.0-9]*[-+a-z0-9]*)-/) {
+			#displayInfo("matched: $1\n");
+
+			my $pkgName = $1;
+
+			if($lastPkg ne $pkgName and $lastPkg ne "") {
+				processVersions(@versions);
+				@versions = ();
+			}
+
+			push(@versions, $f);
+			$lastPkg = $pkgName;
+		#} else {
+		#	displayInfo("mismatch\n");
+		}
+	}
+}
+
+closedir CACHEDIR;
